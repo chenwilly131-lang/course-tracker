@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="課程進度">
+<meta name="theme-color" content="#111111">
+<title>課程進度追蹤</title>
+<style>
+:root{
+  --bg:#111111;--bg2:#1c1c1e;--bg3:#2c2c2e;--bg4:#3a3a3c;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.15);
+  --text:#ffffff;--text2:#aeaeb2;--text3:#636366;
+  --blue:#0A84FF;--blue2:#1a6fd4;--blue-bg:rgba(10,132,255,0.15);
+  --green:#30D158;--green-bg:rgba(48,209,88,0.13);
+  --orange:#FF9F0A;--orange-bg:rgba(255,159,10,0.13);
+  --red:#FF453A;--red-bg:rgba(255,69,58,0.13);
+  --purple:#BF5AF2;--purple-bg:rgba(191,90,242,0.13);
+  --r:14px;--rs:10px;--rxl:20px;
+}
+@media(prefers-color-scheme:light){
+  :root{
+    --bg:#f2f2f7;--bg2:#ffffff;--bg3:#e5e5ea;--bg4:#d1d1d6;
+    --border:rgba(0,0,0,0.06);--border2:rgba(0,0,0,0.12);
+    --text:#000000;--text2:#6c6c70;--text3:#aeaeb2;
+    --blue:#007AFF;--blue2:#0056b3;--blue-bg:rgba(0,122,255,0.1);
+    --green:#34C759;--green-bg:rgba(52,199,89,0.1);
+    --orange:#FF9500;--orange-bg:rgba(255,149,0,0.1);
+    --red:#FF3B30;--red-bg:rgba(255,59,48,0.1);
+    --purple:#AF52DE;--purple-bg:rgba(175,82,222,0.1);
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{height:100%;-webkit-text-size-adjust:100%}
+body{
+  min-height:100%;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Helvetica Neue',sans-serif;
+  overscroll-behavior:none;-webkit-overflow-scrolling:touch;
+}
+
+/* Layout */
+.app{
+  max-width:430px;margin:0 auto;
+  padding-top:calc(56px + env(safe-area-inset-top));
+  padding-bottom:calc(88px + env(safe-area-inset-bottom));
+  min-height:100vh;
+}
+
+/* Nav */
+.nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  padding-top:env(safe-area-inset-top);
+  background:rgba(17,17,17,0.85);
+  backdrop-filter:blur(24px) saturate(180%);
+  -webkit-backdrop-filter:blur(24px) saturate(180%);
+  border-bottom:0.5px solid var(--border);
+}
+@media(prefers-color-scheme:light){
+  .nav{background:rgba(242,242,247,0.85)}
+}
+.nav-inner{max-width:430px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:12px 20px}
+.nav-title{font-size:17px;font-weight:600;letter-spacing:-0.3px}
+.nav-action{
+  background:var(--blue);color:#fff;border:none;
+  font-size:14px;font-weight:500;padding:6px 14px;
+  border-radius:99px;cursor:pointer;font-family:inherit;
+  transition:transform .1s,opacity .1s;
+  display:flex;align-items:center;gap:5px;
+}
+.nav-action:active{transform:scale(.93);opacity:.85}
+.nav-action:empty{display:none}
+
+/* Tab Bar - iOS style */
+.tab-bar{
+  position:fixed;bottom:0;left:0;right:0;z-index:100;
+  background:rgba(17,17,17,0.88);
+  backdrop-filter:blur(24px) saturate(180%);
+  -webkit-backdrop-filter:blur(24px) saturate(180%);
+  border-top:0.5px solid var(--border);
+  padding-bottom:env(safe-area-inset-bottom);
+  display:flex;
+}
+@media(prefers-color-scheme:light){
+  .tab-bar{background:rgba(242,242,247,0.88)}
+}
+.tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  gap:3px;border:none;background:transparent;cursor:pointer;
+  padding:10px 0 8px;position:relative;
+}
+.tab-icon{
+  width:28px;height:28px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;transition:transform .15s cubic-bezier(.34,1.56,.64,1);
+}
+.tab.active .tab-icon{transform:scale(1.1)}
+.tab-label{font-size:10px;color:var(--text3);letter-spacing:-0.1px;font-weight:400;transition:color .15s}
+.tab.active .tab-label{color:var(--blue);font-weight:500}
+.tab-dot{
+  position:absolute;top:8px;right:calc(50% - 20px);
+  width:7px;height:7px;border-radius:50%;background:var(--red);
+  display:none;border:1.5px solid var(--bg);
+}
+.tab-dot.show{display:block}
+
+/* Pages with animation */
+.pages{position:relative}
+.page{display:none;padding:16px 16px 8px;animation:fadeSlide .22s cubic-bezier(.4,0,.2,1)}
+.page.active{display:block}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* Cards */
+.card{
+  background:var(--bg2);border:0.5px solid var(--border);
+  border-radius:var(--r);padding:15px 16px;margin-bottom:10px;
+  transition:transform .1s;
+}
+.card:active{transform:scale(.99)}
+.card-title{font-size:13px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px}
+
+/* Course cards in overview */
+.course-card{
+  background:var(--bg2);border:0.5px solid var(--border);
+  border-radius:var(--r);padding:16px;margin-bottom:10px;
+  position:relative;overflow:hidden;
+}
+.course-card-accent{
+  position:absolute;top:0;left:0;bottom:0;width:4px;border-radius:4px 0 0 4px;
+}
+.course-card-inner{padding-left:12px}
+.course-name{font-size:16px;font-weight:600;margin-bottom:3px}
+.course-sub{font-size:13px;color:var(--text2);margin-bottom:10px}
+.progress-bar{height:5px;background:var(--bg3);border-radius:99px;overflow:hidden;margin:8px 0 4px}
+.progress-fill{height:100%;border-radius:99px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+.progress-labels{display:flex;justify-content:space-between;font-size:12px;color:var(--text3)}
+
+/* Metrics */
+.metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.metric{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--rs);padding:12px 6px;text-align:center}
+.metric-val{font-size:20px;font-weight:700;letter-spacing:-0.5px}
+.metric-lbl{font-size:11px;color:var(--text2);margin-top:2px}
+
+/* Badge */
+.badge{display:inline-flex;align-items:center;font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px}
+.badge-blue{background:var(--blue-bg);color:var(--blue)}
+.badge-green{background:var(--green-bg);color:var(--green)}
+.badge-orange{background:var(--orange-bg);color:var(--orange)}
+.badge-red{background:var(--red-bg);color:var(--red)}
+.badge-purple{background:var(--purple-bg);color:var(--purple)}
+
+/* Rows */
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.label{font-size:13px;color:var(--text2)}
+
+/* Buttons */
+.btn{
+  padding:10px 18px;border-radius:var(--rs);
+  border:0.5px solid var(--border2);background:transparent;
+  cursor:pointer;font-size:15px;color:var(--text);font-family:inherit;
+  transition:transform .1s,background .1s;
+  -webkit-appearance:none;
+}
+.btn:active{transform:scale(.96);background:var(--bg3)}
+.btn-primary{background:var(--blue);color:#fff;border-color:var(--blue2);font-weight:500}
+.btn-primary:active{background:var(--blue2)}
+.btn-sm{padding:6px 13px;font-size:13px}
+.btn-danger{color:var(--red);border-color:rgba(255,69,58,0.25)}
+.btn-danger:active{background:var(--red-bg)}
+.btn-ghost{border-color:transparent;color:var(--blue)}
+
+/* Episode list */
+.ep-item{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 14px;border-radius:var(--rs);
+  margin-bottom:6px;background:var(--bg2);border:0.5px solid var(--border);
+  transition:opacity .2s,transform .1s;
+}
+.ep-item:active{transform:scale(.98)}
+.ep-item.done{opacity:.38}
+.ep-num{font-size:12px;color:var(--text3);min-width:24px;font-variant-numeric:tabular-nums;text-align:right}
+.ep-name{flex:1;font-size:15px;font-weight:400}
+.ep-dur{font-size:12px;color:var(--text3);min-width:36px;text-align:right}
+.check-btn{
+  width:28px;height:28px;border-radius:50%;
+  border:1.5px solid var(--border2);background:transparent;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;transition:all .2s cubic-bezier(.34,1.56,.64,1);
+}
+.check-btn.done{background:var(--blue);border-color:var(--blue2);transform:scale(1.05)}
+.check-btn:active{transform:scale(.88)}
+
+/* Empty state */
+.empty{text-align:center;padding:60px 20px;color:var(--text2);font-size:15px;line-height:2}
+.empty-icon{font-size:48px;margin-bottom:12px;display:block}
+
+/* Forms */
+.input-group{margin-bottom:15px}
+.input-group label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px;font-weight:500}
+input[type=text],input[type=number],input[type=date],select,textarea{
+  width:100%;padding:12px 14px;
+  border:0.5px solid var(--border2);border-radius:var(--rs);
+  background:var(--bg3);color:var(--text);font-size:16px;
+  -webkit-appearance:none;outline:none;font-family:inherit;
+  transition:border-color .15s;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)}
+select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23636366' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center;padding-right:38px;
+}
+
+/* Sheet (bottom modal) */
+.sheet-overlay{
+  display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;
+  align-items:flex-end;justify-content:center;
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+}
+.sheet-overlay.open{display:flex;animation:fadeIn .2s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.sheet{
+  background:var(--bg2);border-radius:var(--rxl) var(--rxl) 0 0;
+  padding:0 20px;width:100%;max-width:430px;
+  padding-bottom:max(28px,env(safe-area-inset-bottom));
+  animation:slideUp .28s cubic-bezier(.4,0,.2,1);
+  max-height:90vh;overflow-y:auto;
+}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.sheet-handle{width:40px;height:4px;background:var(--bg4);border-radius:99px;margin:14px auto 20px}
+.sheet-title{font-size:18px;font-weight:700;margin-bottom:20px;letter-spacing:-0.3px}
+.sheet-actions{display:flex;gap:10px;margin-top:18px}
+.sheet-actions .btn{flex:1;text-align:center;padding:14px;font-size:16px;border-radius:var(--r)}
+
+/* Weekly schedule */
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:12px}
+.day-col{display:flex;flex-direction:column;align-items:center;gap:4px}
+.day-label{font-size:11px;color:var(--text2);font-weight:500}
+.day-toggle{
+  width:36px;height:36px;border-radius:50%;border:1.5px solid var(--border2);
+  background:transparent;cursor:pointer;font-size:13px;color:var(--text2);
+  transition:all .15s cubic-bezier(.34,1.56,.64,1);display:flex;align-items:center;justify-content:center;font-weight:500;
+}
+.day-toggle.on{background:var(--blue);border-color:var(--blue2);color:#fff;transform:scale(1.08)}
+
+/* Plan items */
+.plan-week-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:10px}
+.plan-week-header{padding:12px 16px;background:var(--bg3);display:flex;justify-content:space-between;align-items:center}
+.plan-week-title{font-size:14px;font-weight:600}
+.plan-day-row{display:flex;align-items:center;gap:10px;padding:11px 16px;border-top:0.5px solid var(--border)}
+.plan-day-name{font-size:14px;font-weight:500;min-width:28px}
+.plan-day-info{flex:1;font-size:13px;color:var(--text2)}
+.plan-day-badge{font-size:12px}
+
+/* Auto plan result */
+.auto-plan-day{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--rs);padding:12px 14px;margin-bottom:6px}
+.auto-plan-date{font-size:13px;font-weight:600;margin-bottom:4px}
+.auto-plan-info{font-size:13px;color:var(--text2)}
+
+/* Section divider */
+.section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.section-title{font-size:22px;font-weight:700;letter-spacing:-0.5px}
+
+/* Color dots for courses */
+.course-colors{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.color-dot{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:transform .15s}
+.color-dot.selected{border-color:var(--text);transform:scale(1.15)}
+
+/* Segmented control */
+.seg{display:flex;background:var(--bg3);border-radius:var(--rs);padding:3px;margin-bottom:16px}
+.seg-btn{flex:1;padding:7px;border:none;background:transparent;border-radius:8px;font-size:14px;color:var(--text2);cursor:pointer;transition:all .15s;font-family:inherit}
+.seg-btn.active{background:var(--bg2);color:var(--text);font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+
+/* Tabs in plan page */
+.plan-tabs{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+.plan-tab{padding:7px 16px;border-radius:99px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:14px;cursor:pointer;white-space:nowrap;font-family:inherit;transition:all .15s}
+.plan-tab.active{background:var(--blue);color:#fff;border-color:var(--blue2);font-weight:500}
+
+.no-data{text-align:center;padding:48px 16px;color:var(--text2);font-size:14px;line-height:1.8}
+</style>
+</head>
+<body>
+<div class="nav">
+  <div class="nav-inner">
+    <span class="nav-title" id="nav-title">📚 課程進度</span>
+    <button class="nav-action" id="nav-btn" onclick="navAct()"></button>
+  </div>
+</div>
+
+<div class="app">
+  <div class="pages">
+    <div id="page-overview" class="page active" style="padding-top:8px"><div id="ov-content"></div></div>
+    <div id="page-episodes" class="page" style="padding-top:8px"><div id="ep-content"></div></div>
+    <div id="page-plan" class="page" style="padding-top:8px"><div id="pl-content"></div></div>
+    <div id="page-settings" class="page" style="padding-top:8px"><div id="st-content"></div></div>
+  </div>
+</div>
+
+<div class="tab-bar">
+  <button class="tab active" onclick="go('overview')">
+    <div class="tab-icon">📊</div><span class="tab-label">總覽</span>
+  </button>
+  <button class="tab" onclick="go('episodes')">
+    <div class="tab-icon">🎬</div><span class="tab-label">集數</span>
+  </button>
+  <button class="tab" onclick="go('plan')">
+    <div class="tab-icon">📅</div><span class="tab-label">排程</span>
+  </button>
+  <button class="tab" onclick="go('settings')">
+    <div class="tab-icon">⚙️</div><span class="tab-label">設定</span>
+  </button>
+</div>
+
+<!-- 新增課程 Sheet -->
+<div class="sheet-overlay" id="s-course" onclick="closeBg(event,'s-course')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">新增課程</div>
+    <div class="input-group"><label>課程名稱</label><input type="text" id="c-name" placeholder="例：Python 程式設計"></div>
+    <div class="input-group"><label>總集數</label><input type="number" id="c-eps" inputmode="numeric" placeholder="50"></div>
+    <div class="input-group"><label>每集時長（分鐘）</label><input type="number" id="c-dur" inputmode="numeric" placeholder="30"></div>
+    <div class="input-group">
+      <label>顏色</label>
+      <div class="course-colors" id="color-picker"></div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn" onclick="close1('s-course')">取消</button>
+      <button class="btn btn-primary" onclick="saveCourse()">新增</button>
+    </div>
+  </div>
+</div>
+
+<!-- 快速更新 Sheet -->
+<div class="sheet-overlay" id="s-mark" onclick="closeBg(event,'s-mark')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="mark-title">更新進度</div>
+    <div class="input-group"><label>目前已看到第幾集</label><input type="number" id="m-ep" inputmode="numeric"></div>
+    <div class="sheet-actions">
+      <button class="btn" onclick="close1('s-mark')">取消</button>
+      <button class="btn btn-primary" onclick="saveMark()">更新</button>
+    </div>
+  </div>
+</div>
+
+<!-- 週排程 Sheet -->
+<div class="sheet-overlay" id="s-weekly" onclick="closeBg(event,'s-weekly')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">設定週排程</div>
+    <div class="input-group"><label>選擇課程</label><select id="w-course"></select></div>
+    <div class="input-group">
+      <label>每週觀看的日子</label>
+      <div class="week-grid" id="w-days"></div>
+    </div>
+    <div class="input-group"><label>每次觀看幾集</label><input type="number" id="w-count" inputmode="numeric" placeholder="例：2"></div>
+    <div class="sheet-actions">
+      <button class="btn" onclick="close1('s-weekly')">取消</button>
+      <button class="btn btn-primary" onclick="saveWeekly()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 自動規劃 Sheet -->
+<div class="sheet-overlay" id="s-auto" onclick="closeBg(event,'s-auto')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">自動規劃進度</div>
+    <div class="input-group"><label>選擇課程</label><select id="a-course"></select></div>
+    <div class="input-group"><label>完成期限</label><input type="date" id="a-deadline"></div>
+    <div class="input-group"><label>每天最多幾分鐘</label><input type="number" id="a-daily" inputmode="numeric" placeholder="例：60"></div>
+    <div id="auto-preview" style="margin-bottom:8px"></div>
+    <div class="sheet-actions">
+      <button class="btn" onclick="close1('s-auto')">取消</button>
+      <button class="btn btn-primary" onclick="calcAuto()">計算規劃</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const COLORS=['#0A84FF','#30D158','#FF9F0A','#FF453A','#BF5AF2','#FF6B6B','#4ECDC4','#FFE66D'];
+let S=JSON.parse(localStorage.getItem('cpt4')||'null')||{courses:[],weeklies:[],autoPlans:[],active:null};
+let curTab='overview';
+let selColor=COLORS[0];
+let wDays=[false,false,false,false,false,false,false];
+
+function save(){localStorage.setItem('cpt4',JSON.stringify(S))}
+function getC(){return S.courses.find(c=>c.id===S.active)||S.courses[0]||null}
+function fmtTime(m){if(!m)return'0分';if(m<60)return m+'分鐘';const h=Math.floor(m/60),r=m%60;return r?`${h}小時${r}分`:`${h}小時`}
+function fmtDate(d){const dt=new Date(d);return`${dt.getMonth()+1}/${dt.getDate()}`}
+
+function go(t){
+  if(curTab===t)return;
+  curTab=t;
+  const tabs=['overview','episodes','plan','settings'];
+  document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',tabs[i]===t));
+  document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+  const pg=document.getElementById('page-'+t);
+  pg.classList.add('active');
+  // Reset animation
+  pg.style.animation='none';
+  pg.offsetHeight;
+  pg.style.animation='';
+
+  const c=getC();
+  const navMap={
+    overview:{title:'📚 課程進度',btn:'',act:null},
+    episodes:{title:c?c.name:'集數',btn:c?'更新進度':'',act:c?()=>openMark():null},
+    plan:{title:'學習排程',btn:'新增',act:()=>openPlanMenu()},
+    settings:{title:'設定',btn:'新增課程',act:()=>openCourse()}
+  };
+  const n=navMap[t];
+  document.getElementById('nav-title').textContent=n.title;
+  const nb=document.getElementById('nav-btn');
+  nb.textContent=n.btn;
+  nb._act=n.act;
+
+  if(t==='overview')renderOv();
+  if(t==='episodes')renderEp();
+  if(t==='plan')renderPl();
+  if(t==='settings')renderSt();
+}
+
+function navAct(){const nb=document.getElementById('nav-btn');if(nb._act)nb._act()}
+
+/* ── OVERVIEW ── */
+function courseColor(c){return c.color||COLORS[0]}
+function renderOv(){
+  const el=document.getElementById('ov-content');
+  if(!S.courses.length){
+    el.innerHTML=`<div class="empty"><span class="empty-icon">📚</span>還沒有課程<br><br><button class="btn btn-primary" style="width:100%;padding:14px" onclick="go('settings')">新增第一個課程 →</button></div>`;
+    return;
+  }
+  const totalWatched=S.courses.reduce((a,c)=>a+c.watched,0);
+  const totalEps=S.courses.reduce((a,c)=>a+c.total,0);
+  const totalPct=totalEps>0?Math.round(totalWatched/totalEps*100):0;
+
+  let html=`
+  <div class="card" style="margin-bottom:12px">
+    <div class="row" style="margin-bottom:10px">
+      <span style="font-size:15px;font-weight:600;color:var(--text2)">整體進度</span>
+      <span class="badge badge-blue">${totalPct}%</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${totalPct}%;background:var(--blue)"></div></div>
+    <div class="progress-labels"><span>${totalWatched} 集已完成</span><span>共 ${totalEps} 集</span></div>
+  </div>`;
+
+  html+=S.courses.map(c=>{
+    const pct=c.total>0?Math.round(c.watched/c.total*100):0;
+    const rem=c.total-c.watched;
+    const col=courseColor(c);
+    return`<div class="course-card" onclick="setActive('${c.id}');go('episodes')">
+      <div class="course-card-accent" style="background:${col}"></div>
+      <div class="course-card-inner">
+        <div class="row" style="margin-bottom:3px">
+          <span class="course-name">${c.name}</span>
+          <span class="badge" style="background:${col}22;color:${col}">${pct}%</span>
+        </div>
+        <div class="course-sub">${c.watched}/${c.total}集・剩餘${fmtTime(rem*c.duration)}</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${col}"></div></div>
+        <div class="progress-labels"><span style="color:${col};font-weight:500">${pct===100?'✓ 已完成':'進行中'}</span><span>每集${c.duration}分鐘</span></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML=html;
+}
+
+function setActive(id){S.active=id;save()}
+
+/* ── EPISODES ── */
+function renderEp(){
+  const c=getC();
+  const el=document.getElementById('ep-content');
+  document.getElementById('nav-title').textContent=c?c.name:'集數';
+  const nb=document.getElementById('nav-btn');
+  nb.textContent=c?'更新進度':'';
+  nb._act=c?()=>openMark():null;
+  if(!c){el.innerHTML='<div class="empty"><span class="empty-icon">🎬</span>尚無課程</div>';return}
+  const col=courseColor(c);
+  const pct=c.total>0?Math.round(c.watched/c.total*100):0;
+  let html=`
+  <div class="card" style="margin-bottom:12px">
+    <div class="row" style="margin-bottom:8px">
+      <span style="font-size:15px;font-weight:600">${pct}% 已完成</span>
+      <span style="font-size:13px;color:var(--text2)">${c.watched}/${c.total}集</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${col}"></div></div>
+  </div>`;
+  if(S.courses.length>1){
+    html+=`<div style="display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding-bottom:2px;-webkit-overflow-scrolling:touch">
+      ${S.courses.map(x=>`<button onclick="setActive('${x.id}');renderEp()" style="padding:6px 14px;border-radius:99px;border:1px solid ${x.id===c.id?courseColor(x):'var(--border2)'};background:${x.id===c.id?courseColor(x)+'22':'transparent'};color:${x.id===c.id?courseColor(x):'var(--text2)'};white-space:nowrap;font-size:13px;cursor:pointer;font-family:inherit">${x.name}</button>`).join('')}
+    </div>`;
+  }
+  html+=Array.from({length:c.total},(_,i)=>{
+    const done=i<c.watched;
+    return`<div class="ep-item${done?' done':''}">
+      <span class="ep-num">${i+1}</span>
+      <span class="ep-name">第 ${i+1} 集</span>
+      <span class="ep-dur">${c.duration}分</span>
+      <button class="check-btn${done?' done':''}" style="${done?`background:${col};border-color:${col}`:''}" onclick="toggleEp(${i})">
+        ${done?`<svg width="12" height="9" viewBox="0 0 12 9" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1,4.5 4,7.5 11,1"/></svg>`:''}
+      </button>
+    </div>`;
+  }).join('');
+  el.innerHTML=html;
+  // scroll to current
+  setTimeout(()=>{
+    const items=el.querySelectorAll('.ep-item');
+    if(c.watched<items.length)items[c.watched].scrollIntoView({block:'center',behavior:'smooth'});
+  },100);
+}
+
+function toggleEp(i){
+  const c=getC();if(!c)return;
+  c.watched=i<c.watched?i:i+1;
+  save();renderEp();
+}
+
+/* ── PLAN ── */
+let planTab='weekly';
+function renderPl(){
+  const el=document.getElementById('pl-content');
+  el.innerHTML=`
+  <div class="plan-tabs">
+    <button class="plan-tab${planTab==='weekly'?' active':''}" onclick="switchPlanTab('weekly')">📅 週排程</button>
+    <button class="plan-tab${planTab==='auto'?' active':''}" onclick="switchPlanTab('auto')">✨ 自動規劃</button>
+  </div>
+  <div id="pl-sub"></div>`;
+  renderPlSub();
+}
+function switchPlanTab(t){
+  planTab=t;
+  document.querySelectorAll('.plan-tab').forEach((el,i)=>el.classList.toggle('active',['weekly','auto'][i]===t));
+  renderPlSub();
+}
+function renderPlSub(){
+  const el=document.getElementById('pl-sub');
+  if(!el)return;
+  if(planTab==='weekly') renderWeekly(el);
+  else renderAuto(el);
+}
+
+const DAY_NAMES=['日','一','二','三','四','五','六'];
+
+function renderWeekly(el){
+  if(!S.weeklies||!S.weeklies.length){
+    el.innerHTML=`<div class="no-data">尚無週排程<br>點右上角「新增」設定每週計劃</div>`;
+    return;
+  }
+  el.innerHTML=S.weeklies.map(w=>{
+    const c=S.courses.find(x=>x.id===w.courseId);
+    const col=c?courseColor(c):'var(--blue)';
+    const dayRows=w.days.map((on,i)=>on?`
+      <div class="plan-day-row">
+        <span class="plan-day-name" style="color:${col}">${DAY_NAMES[i]}</span>
+        <span class="plan-day-info">觀看 ${w.count} 集・${fmtTime(w.count*(c?c.duration:30))}</span>
+        <span class="badge" style="background:${col}22;color:${col};font-size:11px">${w.count}集</span>
+      </div>`:''
+    ).join('');
+    const daysOn=w.days.filter(Boolean).length;
+    return`<div class="plan-week-card">
+      <div class="plan-week-header">
+        <span class="plan-week-title">${c?c.name:'未知課程'}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="badge badge-blue">每週${daysOn}天</span>
+          <button class="btn btn-danger btn-sm" onclick="deleteWeekly('${w.id}')">刪除</button>
+        </div>
+      </div>
+      ${dayRows}
+    </div>`;
+  }).join('');
+}
+
+function renderAuto(el){
+  if(!S.autoPlans||!S.autoPlans.length){
+    el.innerHTML=`<div class="no-data">尚無自動規劃<br>點右上角「新增」，設定期限讓我幫你規劃</div>`;
+    return;
+  }
+  el.innerHTML=S.autoPlans.map(ap=>{
+    const c=S.courses.find(x=>x.id===ap.courseId);
+    const col=c?courseColor(c):'var(--blue)';
+    const done=c&&c.watched>=ap.totalEps;
+    return`<div class="plan-week-card">
+      <div class="plan-week-header">
+        <span class="plan-week-title">${c?c.name:'未知'}</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          ${done?'<span class="badge badge-green">已完成</span>':'<span class="badge badge-orange">進行中</span>'}
+          <button class="btn btn-danger btn-sm" onclick="deleteAuto('${ap.id}')">刪除</button>
+        </div>
+      </div>
+      <div class="plan-day-row">
+        <span class="plan-day-info" style="color:var(--text2)">期限：${ap.deadline}・每天最多${fmtTime(ap.dailyMins)}</span>
+      </div>
+      ${ap.days.slice(0,7).map(d=>`
+        <div class="plan-day-row">
+          <span class="plan-day-name" style="color:${col};font-size:13px">${d.date}</span>
+          <span class="plan-day-info">第${d.from+1}–${d.from+d.count}集</span>
+          <span class="badge" style="background:${col}22;color:${col};font-size:11px">${fmtTime(d.mins)}</span>
+        </div>`).join('')}
+      ${ap.days.length>7?`<div style="text-align:center;padding:10px;font-size:13px;color:var(--text2)">...共 ${ap.days.length} 天</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function openPlanMenu(){
+  if(!S.courses.length){alert('請先在設定中新增課程');return}
+  if(planTab==='weekly') openWeekly();
+  else openAuto();
+}
+
+/* Weekly */
+function openWeekly(){
+  const sel=document.getElementById('w-course');
+  sel.innerHTML=S.courses.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  document.getElementById('w-count').value='';
+  wDays=[false,false,false,false,false,false,false];
+  renderWDays();
+  open1('s-weekly');
+}
+function renderWDays(){
+  document.getElementById('w-days').innerHTML=DAY_NAMES.map((d,i)=>
+    `<div class="day-col">
+      <span class="day-label">${d}</span>
+      <button class="day-toggle${wDays[i]?' on':''}" onclick="toggleDay(${i})">${d}</button>
+    </div>`
+  ).join('');
+}
+function toggleDay(i){wDays[i]=!wDays[i];renderWDays()}
+function saveWeekly(){
+  const cid=document.getElementById('w-course').value;
+  const count=parseInt(document.getElementById('w-count').value)||0;
+  if(!wDays.some(Boolean)){alert('請選擇至少一天');return}
+  if(count<1){alert('請輸入每次觀看集數');return}
+  if(!S.weeklies)S.weeklies=[];
+  S.weeklies.push({id:Date.now()+'',courseId:cid,days:[...wDays],count});
+  save();close1('s-weekly');renderPlSub();
+}
+function deleteWeekly(id){S.weeklies=S.weeklies.filter(w=>w.id!==id);save();renderPlSub()}
+
+/* Auto plan */
+function openAuto(){
+  const sel=document.getElementById('a-course');
+  sel.innerHTML=S.courses.map(c=>`<option value="${c.id}">${c.name}（剩${c.total-c.watched}集）</option>`).join('');
+  const d=new Date();d.setDate(d.getDate()+30);
+  document.getElementById('a-deadline').value=d.toISOString().split('T')[0];
+  document.getElementById('a-daily').value='60';
+  document.getElementById('auto-preview').innerHTML='';
+  open1('s-auto');
+}
+function calcAuto(){
+  const cid=document.getElementById('a-course').value;
+  const deadline=document.getElementById('a-deadline').value;
+  const dailyMins=parseInt(document.getElementById('a-daily').value)||60;
+  if(!deadline){alert('請選擇期限');return}
+  const c=S.courses.find(x=>x.id===cid);
+  if(!c)return;
+  const rem=c.total-c.watched;
+  if(rem<=0){alert('這門課程已全部看完！');return}
+  const epsPerDay=Math.max(1,Math.floor(dailyMins/c.duration));
+  const days=[];
+  let ep=c.watched;
+  let cur=new Date();cur.setHours(0,0,0,0);
+  const end=new Date(deadline);
+  while(ep<c.total&&cur<=end){
+    const count=Math.min(epsPerDay,c.total-ep);
+    const dateStr=`${cur.getMonth()+1}/${cur.getDate()}`;
+    days.push({date:dateStr,from:ep,count,mins:count*c.duration});
+    ep+=count;
+    cur.setDate(cur.getDate()+1);
+  }
+  if(ep<c.total){
+    document.getElementById('auto-preview').innerHTML=`<div style="padding:10px;background:var(--red-bg);border-radius:var(--rs);font-size:13px;color:var(--red);margin-bottom:8px">⚠️ 時間不夠！期限前只能看到第${ep}集，距完成還差${c.total-ep}集。<br>建議每天增加時間或延長期限。</div>`;
+  } else {
+    document.getElementById('auto-preview').innerHTML=`<div style="padding:10px;background:var(--green-bg);border-radius:var(--rs);font-size:13px;color:var(--green);margin-bottom:8px">✓ 每天看${epsPerDay}集（${fmtTime(epsPerDay*c.duration)}），共${days.length}天完成！</div>`;
+    if(!S.autoPlans)S.autoPlans=[];
+    S.autoPlans=S.autoPlans.filter(a=>a.courseId!==cid);
+    S.autoPlans.push({id:Date.now()+'',courseId:cid,deadline,dailyMins,totalEps:c.total,days});
+    save();
+    setTimeout(()=>{close1('s-auto');renderPlSub();},800);
+  }
+}
+function deleteAuto(id){S.autoPlans=S.autoPlans.filter(a=>a.id!==id);save();renderPlSub()}
+
+/* ── SETTINGS ── */
+function renderSt(){
+  const el=document.getElementById('st-content');
+  if(!S.courses.length){
+    el.innerHTML=`<div class="empty"><span class="empty-icon">⚙️</span>尚無課程<br>點右上角「新增課程」開始</div>`;
+    return;
+  }
+  el.innerHTML=S.courses.map(c=>{
+    const pct=c.total>0?Math.round(c.watched/c.total*100):0;
+    const col=courseColor(c);
+    return`<div class="course-card">
+      <div class="course-card-accent" style="background:${col}"></div>
+      <div class="course-card-inner">
+        <div class="row" style="margin-bottom:6px">
+          <span style="font-size:16px;font-weight:600">${c.name}</span>
+          <button class="btn btn-danger btn-sm" onclick="delCourse('${c.id}')">刪除</button>
+        </div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:8px">${c.watched}/${c.total}集・每集${c.duration}分鐘</div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${col}"></div></div>
+        <div class="progress-labels"><span style="color:${col}">${pct}%</span><span>已完成${c.watched}集</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* Course form */
+function openCourse(){
+  document.getElementById('c-name').value='';
+  document.getElementById('c-eps').value='';
+  document.getElementById('c-dur').value='';
+  selColor=COLORS[0];
+  document.getElementById('color-picker').innerHTML=COLORS.map(col=>
+    `<div class="color-dot${col===selColor?' selected':''}" style="background:${col}" onclick="pickColor('${col}')"></div>`
+  ).join('');
+  open1('s-course');
+}
+function pickColor(col){
+  selColor=col;
+  document.querySelectorAll('.color-dot').forEach(el=>{
+    el.classList.toggle('selected',el.style.background===col||el.style.backgroundColor===col);
+  });
+}
+function saveCourse(){
+  const name=document.getElementById('c-name').value.trim();
+  const total=parseInt(document.getElementById('c-eps').value)||0;
+  const dur=parseInt(document.getElementById('c-dur').value)||0;
+  if(!name){alert('請輸入課程名稱');return}
+  if(total<1){alert('請輸入集數');return}
+  if(dur<1){alert('請輸入每集時長');return}
+  const id=Date.now()+'';
+  S.courses.push({id,name,total,duration:dur,watched:0,color:selColor});
+  if(!S.active)S.active=id;
+  save();close1('s-course');renderSt();renderOv();
+}
+function delCourse(id){
+  if(!confirm('確定刪除此課程？'))return;
+  S.courses=S.courses.filter(c=>c.id!==id);
+  S.weeklies=(S.weeklies||[]).filter(w=>w.courseId!==id);
+  S.autoPlans=(S.autoPlans||[]).filter(a=>a.courseId!==id);
+  if(S.active===id)S.active=S.courses[0]?.id||null;
+  save();renderSt();
+}
+
+/* Mark */
+function openMark(){
+  const c=getC();if(!c)return;
+  document.getElementById('mark-title').textContent=`更新進度：${c.name}`;
+  document.getElementById('m-ep').value=c.watched;
+  document.getElementById('m-ep').max=c.total;
+  open1('s-mark');
+}
+function saveMark(){
+  const c=getC();if(!c)return;
+  const v=Math.max(0,Math.min(c.total,parseInt(document.getElementById('m-ep').value)||0));
+  c.watched=v;save();close1('s-mark');renderEp();
+}
+
+/* Sheet helpers */
+function open1(id){document.getElementById(id).classList.add('open')}
+function close1(id){document.getElementById(id).classList.remove('open')}
+function closeBg(e,id){if(e.target===document.getElementById(id))close1(id)}
+
+/* Init */
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{})}
+renderOv();
+document.getElementById('nav-btn')._act=null;
+</script>
+</body>
+</html>
